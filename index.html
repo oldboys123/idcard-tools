@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>身份证排版软件</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .toolbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 18px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .toolbar h1 {
+            color: white;
+            font-size: 26px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+        }
+
+        .toolbar-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .text-item {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            border: 1px dashed transparent;
+            padding: 5px;
+            min-width: 50px;
+            min-height: 20px;
+            z-index: 50;
+        }
+
+        .text-item:hover {
+            border-color: #3b82f6;
+        }
+
+        .text-item.selected {
+            border-color: #3b82f6;
+        }
+
+        .text-item .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .text-item:hover .delete-btn {
+            display: flex;
+        }
+
+        .main-container {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .sidebar h3 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .doc-type {
+            margin-bottom: 24px;
+        }
+
+        .doc-type label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .doc-type select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s;
+            color: #374151;
+        }
+
+        .doc-type select:hover {
+            border-color: #667eea;
+        }
+
+        .doc-type select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 24px;
+            background: #f8fafc;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e0e7ff;
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 12px;
+            transition: transform 0.3s;
+        }
+
+        .upload-area:hover .upload-icon {
+            transform: scale(1.1);
+        }
+
+        .upload-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .upload-text span {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .size-info {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .size-info h4 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .size-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .size-item:last-child {
+            border-bottom: none;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: auto;
+            position: relative;
+        }
+
+        .canvas-container::before {
+            content: 'A4 画布 (210mm × 297mm)';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #94a3b8;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 12px;
+            border-radius: 12px;
+            z-index: 10;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 794px;
+            height: 1123px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border-radius: 4px;
+        }
+
+        #mainCanvas {
+            display: block;
+        }
+
+        .guide-line {
+            position: absolute;
+            background: rgba(102, 126, 234, 0.6);
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+        }
+
+        .guide-horizontal {
+            height: 1px;
+            width: 100%;
+            left: 0;
+        }
+
+        .guide-vertical {
+            width: 1px;
+            height: 100%;
+            top: 0;
+        }
+
+        .image-item {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+
+        .image-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .image-item.selected {
+            border-color: #667eea;
+            border-width: 3px;
+            z-index: 100;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .id-card {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 0 1px rgba(0, 0, 0, 0.15),
+                0 1px 3px rgba(0, 0, 0, 0.15);
+            background: white;
+            padding: 3px;
+            box-sizing: border-box;
+        }
+
+        .household-book {
+            border-radius: 2px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 0 1px rgba(0, 0, 0, 0.15),
+                0 1px 3px rgba(0, 0, 0, 0.15);
+            background: white;
+            padding: 3px;
+            box-sizing: border-box;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+        }
+
+        .image-item:hover .delete-btn {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .print-area {
+            display: none;
+        }
+
+        @media print {
+            .toolbar, .sidebar, .delete-btn {
+                display: none !important;
+            }
+            
+            .main-container {
+                display: block;
+                padding: 0;
+            }
+            
+            .canvas-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            
+            .canvas-wrapper {
+                box-shadow: none;
+                border: none;
+            }
+            
+            .guide-line {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h1>📇 身份证排版软件</h1>
+        <div class="toolbar-buttons">
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                📁 上传图片
+            </button>
+            <button class="btn btn-info" onclick="addText()">
+                🔤 添加文字
+            </button>
+            <button class="btn btn-success" onclick="exportPNG()">
+                🖼️ 导出PNG
+            </button>
+            <button class="btn btn-success" onclick="exportPDF()">
+                📄 导出PDF
+            </button>
+            <button class="btn btn-warning" onclick="printCanvas()">
+                🖨️ 打印
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h3>📋 文档类型</h3>
+            <div class="doc-type">
+                <label>选择类型：</label>
+                <select id="docType" onchange="changeDocType()">
+                    <option value="idcard">身份证 (85.6×54mm)</option>
+                    <option value="household">户口本 (143×105mm)</option>
+                </select>
+            </div>
+
+            <h3>📤 上传图片</h3>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">
+                    点击或拖拽图片到这里<br>
+                    <span>或点击上传按钮</span>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFileSelect(event)">
+
+            <div class="size-info">
+                <h4>📐 尺寸信息</h4>
+                <div class="size-item">
+                    <span>A4画布：</span>
+                    <span>210×297mm</span>
+                </div>
+                <div class="size-item">
+                    <span>身份证：</span>
+                    <span>85.6×54mm</span>
+                </div>
+                <div class="size-item">
+                    <span>圆角半径：</span>
+                    <span>3.18mm</span>
+                </div>
+                <div class="size-item">
+                    <span>户口本：</span>
+                    <span>143×105mm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="mainCanvas" width="794" height="1123"></canvas>
+                <div class="guide-line guide-horizontal" id="guideH"></div>
+                <div class="guide-line guide-vertical" id="guideV"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MM_TO_PX = 3.78;
+        
+        const SIZES = {
+            idcard: { width: 85.6 * MM_TO_PX, height: 54 * MM_TO_PX, radius: 3.18 * MM_TO_PX },
+            household: { width: 143 * MM_TO_PX, height: 105 * MM_TO_PX, radius: 2 }
+        };
+
+        let currentDocType = 'idcard';
+        let images = [];
+        let textItems = [];
+        let selectedImage = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        const uploadArea = document.getElementById('uploadArea');
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        uploadArea.addEventListener('click', () => document.getElementById('fileInput').click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFileSelect(e) {
+            handleFiles(e.target.files);
+        }
+
+        function handleFiles(files) {
+            Array.from(files).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = function() {
+                            addImageToCanvas(this);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function addImageToCanvas(sourceImg) {
+            const size = SIZES[currentDocType];
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            let targetWidth = size.width;
+            let targetHeight = (sourceImg.height / sourceImg.width) * targetWidth;
+            
+            if (targetHeight > size.height) {
+                targetHeight = size.height;
+                targetWidth = (sourceImg.width / sourceImg.height) * targetHeight;
+            }
+
+            let x = (canvasWidth - targetWidth) / 2;
+            let y = (canvasHeight - targetHeight) / 2;
+
+            const offset = images.length * 20;
+            x += offset;
+            y += offset;
+
+            const imageData = {
+                id: Date.now() + Math.random() + Math.random() * 1000000,
+                img: sourceImg,
+                x: x,
+                y: y,
+                width: targetWidth,
+                height: targetHeight,
+                docType: currentDocType
+            };
+
+            images.push(imageData);
+            renderImage(imageData);
+        }
+
+        function renderImage(imageData) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `image-item ${imageData.docType === 'idcard' ? 'id-card' : 'household-book'}`;
+            wrapper.id = `img-${imageData.id}`;
+            wrapper.style.left = imageData.x + 'px';
+            wrapper.style.top = imageData.y + 'px';
+            wrapper.style.width = imageData.width + 'px';
+            wrapper.style.height = imageData.height + 'px';
+
+            const img = document.createElement('img');
+            img.src = imageData.img.src;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteImage(imageData.id);
+            };
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(deleteBtn);
+            canvasWrapper.appendChild(wrapper);
+
+            wrapper.addEventListener('mousedown', (e) => startDrag(e, imageData, wrapper));
+            wrapper.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectImage(imageData.id);
+            });
+
+            selectImage(imageData.id);
+        }
+
+        function selectImage(id) {
+            document.querySelectorAll('.image-item').forEach(el => {
+                el.classList.remove('selected');
+                el.style.zIndex = '1';
+            });
+            selectedImage = images.find(img => img.id === id);
+            if (selectedImage) {
+                const wrapper = document.getElementById(`img-${id}`);
+                if (wrapper) {
+                    wrapper.classList.add('selected');
+                    wrapper.style.zIndex = '100';
+                }
+            }
+        }
+
+        function startDrag(e, imageData, wrapper) {
+            if (e.target.classList.contains('delete-btn')) return;
+            
+            isDragging = true;
+            selectImage(imageData.id);
+            
+            const rect = wrapper.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            const mouseMoveHandler = (ev) => onDrag(ev, imageData, wrapper);
+            const mouseUpHandler = () => stopDrag(imageData, wrapper, mouseMoveHandler, mouseUpHandler);
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+        }
+
+        function onDrag(e, imageData, wrapper) {
+            if (!isDragging) return;
+
+            const canvasRect = canvasWrapper.getBoundingClientRect();
+            let newX = e.clientX - canvasRect.left - dragOffset.x;
+            let newY = e.clientY - canvasRect.top - dragOffset.y;
+
+            newX = Math.max(0, Math.min(canvas.width - imageData.width, newX));
+            newY = Math.max(0, Math.min(canvas.height - imageData.height, newY));
+
+            imageData.x = newX;
+            imageData.y = newY;
+            wrapper.style.left = newX + 'px';
+            wrapper.style.top = newY + 'px';
+
+            checkGuides(imageData);
+        }
+
+        function checkGuides(imageData) {
+            const guideH = document.getElementById('guideH');
+            const guideV = document.getElementById('guideV');
+            
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+            const imgCenterX = imageData.x + imageData.width / 2;
+            const imgCenterY = imageData.y + imageData.height / 2;
+
+            guideH.style.display = 'none';
+            guideV.style.display = 'none';
+
+            if (Math.abs(imageData.x) < 5 || Math.abs(imageData.x + imageData.width - canvasWidth) < 5) {
+                guideH.style.display = 'block';
+                guideH.style.top = '0';
+            }
+            
+            if (Math.abs(imageData.y) < 5 || Math.abs(imageData.y + imageData.height - canvasHeight) < 5) {
+                guideV.style.display = 'block';
+                guideV.style.left = '0';
+            }
+
+            if (Math.abs(imgCenterX - centerX) < 5) {
+                guideV.style.display = 'block';
+                guideV.style.left = centerX + 'px';
+            }
+            
+            if (Math.abs(imgCenterY - centerY) < 5) {
+                guideH.style.display = 'block';
+                guideH.style.top = centerY + 'px';
+            }
+
+            images.forEach(otherImg => {
+                if (otherImg.id === imageData.id) return;
+
+                if (Math.abs(imageData.x - otherImg.x) < 5) {
+                    guideV.style.display = 'block';
+                    guideV.style.left = otherImg.x + 'px';
+                }
+                
+                if (Math.abs((imageData.x + imageData.width) - (otherImg.x + otherImg.width)) < 5) {
+                    guideV.style.display = 'block';
+                    guideV.style.left = (otherImg.x + otherImg.width) + 'px';
+                }
+                
+                if (Math.abs(imageData.y - otherImg.y) < 5) {
+                    guideH.style.display = 'block';
+                    guideH.style.top = otherImg.y + 'px';
+                }
+                
+                if (Math.abs((imageData.y + imageData.height) - (otherImg.y + otherImg.height)) < 5) {
+                    guideH.style.display = 'block';
+                    guideH.style.top = (otherImg.y + otherImg.height) + 'px';
+                }
+            });
+        }
+
+        function stopDrag(imageData, wrapper, moveHandler, upHandler) {
+            isDragging = false;
+            document.getElementById('guideH').style.display = 'none';
+            document.getElementById('guideV').style.display = 'none';
+            if (moveHandler) {
+                document.removeEventListener('mousemove', moveHandler);
+            }
+            if (upHandler) {
+                document.removeEventListener('mouseup', upHandler);
+            }
+        }
+
+        function deleteImage(id) {
+            images = images.filter(img => img.id !== id);
+            const wrapper = document.getElementById(`img-${id}`);
+            if (wrapper) wrapper.remove();
+            selectedImage = null;
+        }
+
+        function addText() {
+            const text = prompt('请输入文字：', '文字内容');
+            if (!text) return;
+
+            const fontSize = prompt('请输入字体大小（像素）：', '16');
+            const size = parseInt(fontSize) || 16;
+
+            const textData = {
+                id: Date.now() + Math.random() + Math.random() * 1000000,
+                text: text,
+                fontSize: size,
+                x: canvas.width / 2 - 50,
+                y: canvas.height / 2 - 10,
+                color: '#000000'
+            };
+
+            textItems.push(textData);
+            renderText(textData);
+        }
+
+        function renderText(textData) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'text-item';
+            wrapper.id = `text-${textData.id}`;
+            wrapper.style.left = textData.x + 'px';
+            wrapper.style.top = textData.y + 'px';
+            wrapper.style.fontSize = textData.fontSize + 'px';
+            wrapper.style.color = textData.color;
+            wrapper.innerText = textData.text;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteText(textData.id);
+            };
+
+            wrapper.appendChild(deleteBtn);
+            canvasWrapper.appendChild(wrapper);
+
+            wrapper.addEventListener('mousedown', (e) => startTextDrag(e, textData, wrapper));
+            wrapper.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectText(textData.id);
+            });
+            wrapper.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                editText(textData.id, wrapper);
+            });
+
+            selectText(textData.id);
+        }
+
+        function editText(id, wrapper) {
+            const textData = textItems.find(t => t.id === id);
+            if (!textData) return;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = textData.text;
+            input.style.cssText = `
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: ${wrapper.offsetWidth}px;
+                height: ${wrapper.offsetHeight}px;
+                font-size: ${textData.fontSize}px;
+                color: ${textData.color};
+                border: 1px solid #3b82f6;
+                outline: none;
+                padding: 5px;
+                box-sizing: border-box;
+                z-index: 200;
+            `;
+
+            const parent = wrapper.parentNode;
+            const rect = wrapper.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
+            input.style.left = (rect.left - parentRect.left) + 'px';
+            input.style.top = (rect.top - parentRect.top) + 'px';
+
+            wrapper.style.display = 'none';
+            parent.appendChild(input);
+            input.focus();
+            input.select();
+
+            const finishEdit = () => {
+                const newText = input.value.trim();
+                if (newText) {
+                    textData.text = newText;
+                    wrapper.innerText = newText;
+                }
+                wrapper.style.display = 'block';
+                input.remove();
+            };
+
+            input.addEventListener('blur', finishEdit);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    finishEdit();
+                }
+                if (e.key === 'Escape') {
+                    wrapper.style.display = 'block';
+                    input.remove();
+                }
+            });
+        }
+
+        function selectText(id) {
+            document.querySelectorAll('.text-item').forEach(el => el.classList.remove('selected'));
+            const textData = textItems.find(t => t.id === id);
+            if (textData) {
+                const wrapper = document.getElementById(`text-${id}`);
+                if (wrapper) {
+                    wrapper.classList.add('selected');
+                    wrapper.style.zIndex = '100';
+                }
+            }
+            document.querySelectorAll('.image-item').forEach(el => el.style.zIndex = '1');
+        }
+
+        function deleteText(id) {
+            textItems = textItems.filter(t => t.id !== id);
+            const wrapper = document.getElementById(`text-${id}`);
+            if (wrapper) wrapper.remove();
+        }
+
+        function startTextDrag(e, textData, wrapper) {
+            if (e.target.classList.contains('delete-btn')) return;
+            
+            isDragging = true;
+            selectText(textData.id);
+            
+            const rect = wrapper.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            const mouseMoveHandler = (ev) => onTextDrag(ev, textData, wrapper);
+            const mouseUpHandler = () => stopTextDrag(textData, wrapper, mouseMoveHandler, mouseUpHandler);
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+        }
+
+        function onTextDrag(e, textData, wrapper) {
+            if (!isDragging) return;
+
+            const canvasRect = canvasWrapper.getBoundingClientRect();
+            let newX = e.clientX - canvasRect.left - dragOffset.x;
+            let newY = e.clientY - canvasRect.top - dragOffset.y;
+
+            newX = Math.max(0, Math.min(canvas.width - 100, newX));
+            newY = Math.max(0, Math.min(canvas.height - 20, newY));
+
+            textData.x = newX;
+            textData.y = newY;
+            wrapper.style.left = newX + 'px';
+            wrapper.style.top = newY + 'px';
+        }
+
+        function stopTextDrag(textData, wrapper, moveHandler, upHandler) {
+            isDragging = false;
+            if (moveHandler) {
+                document.removeEventListener('mousemove', moveHandler);
+            }
+            if (upHandler) {
+                document.removeEventListener('mouseup', upHandler);
+            }
+        }
+
+        function changeDocType() {
+            currentDocType = document.getElementById('docType').value;
+        }
+
+        canvasWrapper.addEventListener('click', () => {
+            document.querySelectorAll('.image-item').forEach(el => {
+                el.classList.remove('selected');
+                el.style.zIndex = '1';
+            });
+            document.querySelectorAll('.text-item').forEach(el => {
+                el.classList.remove('selected');
+                el.style.zIndex = '50';
+            });
+            selectedImage = null;
+        });
+
+        function createExportCanvas() {
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvas.width;
+            exportCanvas.height = canvas.height;
+            const exportCtx = exportCanvas.getContext('2d');
+            
+            exportCtx.fillStyle = 'white';
+            exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            images.forEach(imageData => {
+                const size = SIZES[imageData.docType];
+                const padding = 3;
+                const x = imageData.x - padding;
+                const y = imageData.y - padding;
+                const w = imageData.width + padding * 2;
+                const h = imageData.height + padding * 2;
+                
+                exportCtx.save();
+                
+                exportCtx.fillStyle = 'white';
+                
+                if (imageData.docType === 'idcard') {
+                    const r = size.radius + padding;
+                    
+                    exportCtx.beginPath();
+                    exportCtx.moveTo(x + r, y);
+                    exportCtx.lineTo(x + w - r, y);
+                    exportCtx.quadraticCurveTo(x + w, y, x + w, y + r);
+                    exportCtx.lineTo(x + w, y + h - r);
+                    exportCtx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                    exportCtx.lineTo(x + r, y + h);
+                    exportCtx.quadraticCurveTo(x, y + h, x, y + h - r);
+                    exportCtx.lineTo(x, y + r);
+                    exportCtx.quadraticCurveTo(x, y, x + r, y);
+                    exportCtx.closePath();
+                    
+                    exportCtx.fill();
+                    
+                    const innerR = size.radius;
+                    exportCtx.beginPath();
+                    exportCtx.moveTo(imageData.x + innerR, imageData.y);
+                    exportCtx.lineTo(imageData.x + imageData.width - innerR, imageData.y);
+                    exportCtx.quadraticCurveTo(imageData.x + imageData.width, imageData.y, imageData.x + imageData.width, imageData.y + innerR);
+                    exportCtx.lineTo(imageData.x + imageData.width, imageData.y + imageData.height - innerR);
+                    exportCtx.quadraticCurveTo(imageData.x + imageData.width, imageData.y + imageData.height, imageData.x + imageData.width - innerR, imageData.y + imageData.height);
+                    exportCtx.lineTo(imageData.x + innerR, imageData.y + imageData.height);
+                    exportCtx.quadraticCurveTo(imageData.x, imageData.y + imageData.height, imageData.x, imageData.y + imageData.height - innerR);
+                    exportCtx.lineTo(imageData.x, imageData.y + innerR);
+                    exportCtx.quadraticCurveTo(imageData.x, imageData.y, imageData.x + innerR, imageData.y);
+                    exportCtx.closePath();
+                    exportCtx.clip();
+                } else {
+                    exportCtx.fillRect(x, y, w, h);
+                    exportCtx.beginPath();
+                    exportCtx.rect(imageData.x, imageData.y, imageData.width, imageData.height);
+                    exportCtx.clip();
+                }
+
+                exportCtx.drawImage(imageData.img, imageData.x, imageData.y, imageData.width, imageData.height);
+                exportCtx.restore();
+
+                exportCtx.save();
+                exportCtx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+                exportCtx.lineWidth = 1;
+                
+                if (imageData.docType === 'idcard') {
+                    const r = size.radius + padding;
+                    
+                    exportCtx.beginPath();
+                    exportCtx.moveTo(x + r, y);
+                    exportCtx.lineTo(x + w - r, y);
+                    exportCtx.quadraticCurveTo(x + w, y, x + w, y + r);
+                    exportCtx.lineTo(x + w, y + h - r);
+                    exportCtx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                    exportCtx.lineTo(x + r, y + h);
+                    exportCtx.quadraticCurveTo(x, y + h, x, y + h - r);
+                    exportCtx.lineTo(x, y + r);
+                    exportCtx.quadraticCurveTo(x, y, x + r, y);
+                    exportCtx.closePath();
+                    exportCtx.stroke();
+                } else {
+                    exportCtx.strokeRect(x, y, w, h);
+                }
+                
+                exportCtx.restore();
+            });
+
+            textItems.forEach(textData => {
+                exportCtx.save();
+                exportCtx.font = textData.fontSize + 'px Microsoft YaHei, sans-serif';
+                exportCtx.fillStyle = textData.color;
+                exportCtx.fillText(textData.text, textData.x, textData.y + textData.fontSize);
+                exportCtx.restore();
+            });
+
+            return exportCanvas;
+        }
+
+        function exportPNG() {
+            const exportCanvas = createExportCanvas();
+            const link = document.createElement('a');
+            link.download = 'id-layout.png';
+            link.href = exportCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const exportCanvas = createExportCanvas();
+            const imgData = exportCanvas.toDataURL('image/png');
+            
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save('id-layout.pdf');
+        }
+
+        function printCanvas() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
