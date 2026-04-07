@@ -344,9 +344,8 @@
             cursor: move;
             user-select: none;
             border: 2px solid transparent;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1;
-            will-change: transform;
         }
 
         .image-item:hover {
@@ -366,7 +365,6 @@
             height: 100%;
             object-fit: cover;
             display: block;
-            pointer-events: none;
         }
 
         .id-card {
@@ -549,8 +547,6 @@
         let selectedImage = null;
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
-        let lastGuideCheck = 0;
-        const GUIDE_THROTTLE = 16; // ~60fps
 
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
@@ -639,7 +635,6 @@
             wrapper.style.top = imageData.y + 'px';
             wrapper.style.width = imageData.width + 'px';
             wrapper.style.height = imageData.height + 'px';
-            wrapper.style.transform = 'translate(0, 0)';
 
             const img = document.createElement('img');
             img.src = imageData.img.src;
@@ -666,11 +661,10 @@
         }
 
         function selectImage(id) {
-            const selected = document.querySelector('.image-item.selected');
-            if (selected) {
-                selected.classList.remove('selected');
-                selected.style.zIndex = '1';
-            }
+            document.querySelectorAll('.image-item').forEach(el => {
+                el.classList.remove('selected');
+                el.style.zIndex = '1';
+            });
             selectedImage = images.find(img => img.id === id);
             if (selectedImage) {
                 const wrapper = document.getElementById(`img-${id}`);
@@ -710,18 +704,10 @@
 
             imageData.x = newX;
             imageData.y = newY;
-            
-            // Use transform for smooth dragging
-            wrapper.style.left = '0';
-            wrapper.style.top = '0';
-            wrapper.style.transform = `translate(${newX}px, ${newY}px)`;
+            wrapper.style.left = newX + 'px';
+            wrapper.style.top = newY + 'px';
 
-            // Throttle guide check
-            const now = Date.now();
-            if (now - lastGuideCheck > GUIDE_THROTTLE) {
-                lastGuideCheck = now;
-                checkGuides(imageData);
-            }
+            checkGuides(imageData);
         }
 
         function checkGuides(imageData) {
@@ -787,12 +773,6 @@
             isDragging = false;
             document.getElementById('guideH').style.display = 'none';
             document.getElementById('guideV').style.display = 'none';
-            
-            // Final position commit
-            wrapper.style.transform = 'translate(0, 0)';
-            wrapper.style.left = imageData.x + 'px';
-            wrapper.style.top = imageData.y + 'px';
-            
             if (moveHandler) {
                 document.removeEventListener('mousemove', moveHandler);
             }
@@ -918,11 +898,7 @@
         }
 
         function selectText(id) {
-            const prevSelected = document.querySelector('.text-item.selected');
-            if (prevSelected) {
-                prevSelected.classList.remove('selected');
-                prevSelected.style.zIndex = '50';
-            }
+            document.querySelectorAll('.text-item').forEach(el => el.classList.remove('selected'));
             const textData = textItems.find(t => t.id === id);
             if (textData) {
                 const wrapper = document.getElementById(`text-${id}`);
